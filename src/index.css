@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-brand-bg: #121212;
+  --color-brand-card: rgba(255, 255, 255, 0.04);
+  --color-brand-accent: #6200EE;
+  --color-brand-muted: rgba(98, 0, 238, 0.08);
+  --color-brand-text: #FFFFFF;
+  --color-brand-heading: #FFFFFF;
+  
+  --color-status-todo: rgba(98, 0, 238, 0.1);
+  --color-status-in-progress: rgba(98, 0, 238, 0.2);
+  --color-status-done: rgba(98, 0, 238, 0.3);
+  --color-status-blocked: rgba(98, 0, 238, 0.4);
+  
+  --transition-120: 120ms;
+  --hover-scale-102: scale(1.02);
+  --press-scale-095: scale(0.95);
+}
+
+/* Hide scrollbar for simulated phone screen view */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Nothing OS inspired base styles */
+* {
+  --tw-ring-inset: var(--tw-empty,/*!*/ /*!*/);
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgba(98, 0, 238, 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  --tw-shadow-colored: 0 4px 20px var(--tw-shadow-color);
+  --tw-blur: var(--tw-empty,/*!*/ /*!*/);
+  --tw-brightness: var(--tw-empty,/*!*/ /*!*/);
+  --tw-contrast: var(--tw-empty,/*!*/ /*!*/);
+  --tw-grayscale: var(--tw-empty,/*!*/ /*!*/);
+  --tw-hue-rotate: var(--tw-empty,/*!*/ /*!*/);
+  --tw-invert: var(--tw-empty,/*!*/ /*!*/);
+  --tw-saturate: var(--tw-empty,/*!*/ /*!*/);
+  --tw-sepia: var(--tw-empty,/*!*/ /*!*/);
+  --tw-drop-shadow: var(--tw-empty,/*!*/ /*!*/);
+}
+
+body {
+  @apply bg-brand-bg text-brand-text antialiased;
+}
+
+.glass-panel {
+  @apply bg-brand-card/80 backdrop-blur-sm border border-white/20;
+}
+
+.focus-ring:focus-visible {
+  @outline-none;
+  @apply ring-2 ring-brand-accent/50 ring-offset-2 ring-offset-brand-bg;
+}
+
+.transition-120 {
+  transition-duration: calc(var(--transition-120) * 1ms);
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-scale-102:hover {
+  --tw-scale-x: var(--hover-scale-102);
+  --tw-scale-y: var(--hover-scale-102);
+  @apply transform;
+}
+
+.press-scale-095:active {
+  --tw-scale-x: var(--press-scale-095);
+  --tw-scale-y: var(--press-scale-095);
+  @apply transform;
+}
