@@ -123,17 +123,24 @@
       const STORAGE_KEY = 'sprint_engine_state_v2';
 
       // ─── Firebase / Database Layer ───────────────────────────────────────
-      const DB_PROJECT = 'demo-sprint-engine';
-      firebase.initializeApp({ projectId: DB_PROJECT, apiKey: 'demo-key' });
-      const db = firebase.firestore();
-      if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-        db.useEmulator('localhost', 8085);
-      }
-      db.enablePersistence().catch(() => {});
+      let db = null;
+      try {
+        if (typeof firebase !== 'undefined') {
+          firebase.initializeApp({ projectId: 'demo-sprint-engine', apiKey: 'demo-key' });
+          db = firebase.firestore();
+          if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            db.useEmulator('localhost', 8085);
+          }
+          db.enablePersistence().catch(() => {});
+        }
+      } catch (e) { console.warn('Firebase init failed:', e); db = null; }
+
+      function canUseFirestore() { return db !== null; }
 
       let _fsAvailable = null;
 
       function isFirestoreAvailable() {
+        if (!canUseFirestore()) return Promise.resolve(false);
         if (_fsAvailable !== null) return Promise.resolve(_fsAvailable);
         return new Promise(resolve => {
           const timeout = setTimeout(() => { _fsAvailable = false; resolve(false); }, 2000);
@@ -1263,7 +1270,7 @@
               <div className="p-3 bg-red-950/20 border border-red-500/20 rounded-xl text-xs space-y-2.5 mt-6 shrink-0">
                 <span className="text-red-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-sm">warning</span> Factory Reset</span>
                 <p className="text-[9px] text-brand-text leading-relaxed">Clears all local data and reloads the application.</p>
-                <button onClick={async () => { if (confirm('Reset all data?')) { try { const collections = ['tasks', 'teamMembers', 'activities', 'settings']; for (const c of collections) { const snap = await db.collection(c).get(); snap.docs.forEach(d => d.ref.delete()); } } catch {} localStorage.removeItem(STORAGE_KEY); window.location.reload(); }} className="w-full py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/30 text-red-100 uppercase font-black text-[9px] tracking-widest rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1">
+                <button onClick={async () => { if (confirm('Reset all data?')) { if (canUseFirestore()) { try { const collections = ['tasks', 'teamMembers', 'activities', 'settings']; for (const c of collections) { const snap = await db.collection(c).get(); snap.docs.forEach(d => d.ref.delete()); } } catch {} } localStorage.removeItem(STORAGE_KEY); window.location.reload(); }} className="w-full py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/30 text-red-100 uppercase font-black text-[9px] tracking-widest rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1">
                   <span className="material-symbols-outlined text-xs">restart_alt</span> Flash Sandbox
                 </button>
               </div>
