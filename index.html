@@ -568,10 +568,6 @@
           setAuthPage(true);
         };
 
-        if (authPage) {
-          return <AuthPage onLogin={handleLogin} onRegister={handleRegister} error={authError} />;
-        }
-
         const [activeTab, setActiveTab] = useState('dashboard');
 
         useEffect(() => {
@@ -673,6 +669,10 @@
         };
 
         const activeManager = teamMembers.find(m => m.id === projectMeta.managerId) || teamMembers[0] || null;
+
+        if (authPage) {
+          return <AuthPage onLogin={handleLogin} onRegister={handleRegister} error={authError} />;
+        }
 
         return (
           <div className="min-h-screen bg-brand-bg text-brand-text font-sans flex flex-col">
