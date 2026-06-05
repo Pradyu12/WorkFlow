@@ -11,6 +11,9 @@
     <!-- Core React UMD Scripts -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Firebase Firestore compat SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <!-- Babel standalone to support live JSX compile in container live preview -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
@@ -117,7 +120,109 @@
       }
 
       // ─── Seeded Data ──────────────────────────────────────────────────────
-      const STORAGE_KEY = 'ais_elegant_dark_state_v1';
+      const STORAGE_KEY = 'sprint_engine_state_v2';
+
+      // ─── Firebase / Database Layer ───────────────────────────────────────
+      const DB_PROJECT = 'demo-sprint-engine';
+      firebase.initializeApp({ projectId: DB_PROJECT, apiKey: 'demo-key' });
+      const db = firebase.firestore();
+      if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+        db.useEmulator('localhost', 8085);
+      }
+      db.enablePersistence().catch(() => {});
+
+      let _fsAvailable = null;
+
+      function isFirestoreAvailable() {
+        if (_fsAvailable !== null) return Promise.resolve(_fsAvailable);
+        return new Promise(resolve => {
+          const timeout = setTimeout(() => { _fsAvailable = false; resolve(false); }, 2000);
+          db.collection('_ping').limit(1).get()
+            .then(() => { clearTimeout(timeout); _fsAvailable = true; resolve(true); })
+            .catch(() => { clearTimeout(timeout); _fsAvailable = false; resolve(false); });
+        });
+      }
+
+      function useDbCollection(collectionName, orderByField) {
+        const [items, setItems] = useState([]);
+        const [ready, setReady] = useState(false);
+
+        useEffect(() => {
+          let cancelled = false;
+          let unsub = null;
+
+          // Always load from localStorage first (instant)
+          try {
+            const cached = localStorage.getItem(STORAGE_KEY);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed[collectionName]) {
+                setItems(parsed[collectionName]);
+              }
+            }
+          } catch {}
+          setReady(true);
+
+          // Then try Firestore for real-time sync
+          const tryFirestore = async () => {
+            const available = await isFirestoreAvailable();
+            if (cancelled) return;
+            if (available) {
+              let query = db.collection(collectionName);
+              if (orderByField) query = query.orderBy(orderByField, 'desc');
+              unsub = query.onSnapshot(snap => {
+                if (cancelled) return;
+                const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                setItems(items);
+                // Backup to localStorage
+                try {
+                  const cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+                  cached[collectionName] = items;
+                  localStorage.setItem(STORAGE_KEY, JSON.stringify(cached));
+                } catch {}
+              });
+            }
+          };
+          tryFirestore();
+
+          return () => { cancelled = true; if (unsub) unsub(); };
+        }, [collectionName]);
+
+        return [items, ready, setItems];
+      }
+
+      async function dbWriteDoc(collectionName, doc) {
+        const { id, ...data } = doc;
+        const available = await isFirestoreAvailable();
+        if (available) {
+          try {
+            await db.collection(collectionName).add(data);
+            return;
+          } catch {}
+        }
+      }
+
+      async function dbUpdateDoc(collectionName, id, data) {
+        const available = await isFirestoreAvailable();
+        if (available) {
+          try {
+            const clean = { ...data };
+            delete clean.id;
+            await db.collection(collectionName).doc(id).update(clean);
+            return;
+          } catch {}
+        }
+      }
+
+      async function dbDeleteDoc(collectionName, id) {
+        const available = await isFirestoreAvailable();
+        if (available) {
+          try {
+            await db.collection(collectionName).doc(id).delete();
+            return;
+          } catch {}
+        }
+      }
 
       // ─── AI Assistant Component ───────────────────────────────────────────
       function AIAssistant({ tasks, teamMembers, projectMeta }) {
@@ -285,14 +390,15 @@
 
       // ─── Main App ─────────────────────────────────────────────────────────
       function App() {
-        const [tasks, setTasks] = useState([]);
-        const [teamMembers, setTeamMembers] = useState([]);
-        const [activities, setActivities] = useState([]);
+        const [tasks, tasksReady, setTasks] = useDbCollection('tasks', 'createdAt');
+        const [teamMembers, membersReady, setTeamMembers] = useDbCollection('teamMembers');
+        const [activities, activitiesReady, setActivities] = useDbCollection('activities', 'timestamp');
         const [projectMeta, setProjectMeta] = useState({
           name: 'Sprint Analytics Engine',
           description: 'Aesthetic metrics visualization panel & task orchestration monitor',
           managerId: ''
         });
+        const ready = tasksReady && membersReady && activitiesReady;
 
         const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -301,46 +407,97 @@
             const cached = localStorage.getItem(STORAGE_KEY);
             if (cached) {
               const parsed = JSON.parse(cached);
-              if (parsed.tasks) setTasks(parsed.tasks);
-              if (parsed.teamMembers) setTeamMembers(parsed.teamMembers);
-              if (parsed.activities) setActivities(parsed.activities);
               if (parsed.projectMeta) setProjectMeta(parsed.projectMeta);
             }
-          } catch (e) { console.warn('LocalState read error', e); }
+          } catch {}
+          // Try Firestore for project meta
+          isFirestoreAvailable().then(available => {
+            if (available) {
+              db.collection('settings').doc('project').get().then(doc => {
+                if (doc.exists) setProjectMeta(doc.data());
+              }).catch(() => {});
+            }
+          });
         }, []);
 
         useEffect(() => {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, teamMembers, activities, projectMeta }));
-        }, [tasks, teamMembers, activities, projectMeta]);
+          if (!ready) return;
+          const data = { tasks, teamMembers, activities, projectMeta };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }, [tasks, teamMembers, activities, projectMeta, ready]);
 
-        const handleAddTask = (newTask) => {
+        const handleAddTask = async (newTask) => {
           const fresh = { ...newTask, id: `task-${Date.now()}`, createdAt: new Date().toISOString() };
-          setTasks(prev => [fresh, ...prev]);
           const user = teamMembers.find(m => m.id === fresh.assigneeId) || { name: 'Unassigned' };
+          const dbAvailable = await isFirestoreAvailable();
+          if (dbAvailable) {
+            await dbWriteDoc('tasks', fresh);
+          } else {
+            setTasks(prev => [fresh, ...prev]);
+          }
           logActivity(`Task "${fresh.title}" created. Assigned to ${user.name}.`, 'create');
         };
 
-        const handleUpdateTask = (updated) => {
+        const handleUpdateTask = async (updated) => {
           const original = tasks.find(t => t.id === updated.id);
-          setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
+          const dbAvailable = await isFirestoreAvailable();
+          if (dbAvailable) {
+            await dbUpdateDoc('tasks', updated.id, updated);
+          } else {
+            setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
+          }
           if (original && original.status !== updated.status) logActivity(`Task "${updated.title}" moved to ${updated.status.toUpperCase()}`, 'move');
           else logActivity(`Task "${updated.title}" updated`, 'system');
         };
 
-        const handleDeleteTask = (id) => {
+        const handleDeleteTask = async (id) => {
           const original = tasks.find(t => t.id === id);
-          setTasks(prev => prev.filter(t => t.id !== id));
+          const dbAvailable = await isFirestoreAvailable();
+          if (dbAvailable) {
+            await dbDeleteDoc('tasks', id);
+          } else {
+            setTasks(prev => prev.filter(t => t.id !== id));
+          }
           if (original) logActivity(`Task "${original.title}" deleted from project backlog.`, 'system');
         };
 
-        const handleAddTeamMember = (member) => {
+        const handleAddTeamMember = async (member) => {
           const fresh = { ...member, id: `member-${Date.now()}` };
-          setTeamMembers(prev => [...prev, fresh]);
+          const dbAvailable = await isFirestoreAvailable();
+          if (dbAvailable) {
+            await dbWriteDoc('teamMembers', fresh);
+          } else {
+            setTeamMembers(prev => [...prev, fresh]);
+          }
           logActivity(`New member "${fresh.name}" onboarded.`, 'create');
         };
 
-        const logActivity = (text, type = 'system') => {
-          setActivities(prev => [{ id: `act-${Date.now()}`, text, timestamp: new Date().toISOString(), type }, ...prev.slice(0, 30)]);
+        const handleUpdateTeamMember = async (id, data) => {
+          const dbAvailable = await isFirestoreAvailable();
+          if (dbAvailable) {
+            await dbUpdateDoc('teamMembers', id, data);
+          } else {
+            setTeamMembers(prev => prev.map(m => m.id === id ? { ...m, ...data } : m));
+          }
+        };
+
+        const handleSaveProjectMeta = async (meta) => {
+          setProjectMeta(meta);
+          const available = await isFirestoreAvailable();
+          if (available) {
+            try { await db.collection('settings').doc('project').set(meta); } catch {}
+          }
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, teamMembers, activities, projectMeta: meta }));
+        };
+
+        const logActivity = async (text, type = 'system') => {
+          const entry = { id: `act-${Date.now()}`, text, timestamp: new Date().toISOString(), type };
+          const dbAvailable = await isFirestoreAvailable();
+          if (dbAvailable) {
+            await dbWriteDoc('activities', entry);
+          } else {
+            setActivities(prev => [entry, ...prev.slice(0, 30)]);
+          }
         };
 
         const activeManager = teamMembers.find(m => m.id === projectMeta.managerId) || teamMembers[0] || null;
@@ -419,7 +576,7 @@
                     <div className="flex-1 overflow-y-auto p-4 md:p-5">
                       {renderActiveTab({
                         tasks, teamMembers, activities, activeManager, projectMeta,
-                        setTasks, setProjectMeta, setTeamMembers,
+                        setProjectMeta: handleSaveProjectMeta, setTeamMembers: handleUpdateTeamMember,
                         onAddTask: handleAddTask, onUpdateTask: handleUpdateTask, onDeleteTask: handleDeleteTask,
                         onAddTeamMember: handleAddTeamMember, logActivity, setActiveTab
                       })}
@@ -1036,8 +1193,8 @@
         const handleSaveConfigs = (e) => {
           e.preventDefault();
           setProjectMeta({ ...projectMeta, name: pName.trim(), description: pDesc.trim() });
-          if (activeManager) {
-            setTeamMembers(prev => prev.map(m => m.id === activeManager.id ? { ...m, name: manName.trim(), email: manEmail.trim() } : m));
+          if (activeManager && manName.trim()) {
+            setTeamMembers(activeManager.id, { name: manName.trim(), email: manEmail.trim() });
           }
           logActivity(`Global specification synchronized: "${pName.trim()}"`, 'system');
           setStatusText('SETTINGS SYNCHRONIZED');
@@ -1106,7 +1263,7 @@
               <div className="p-3 bg-red-950/20 border border-red-500/20 rounded-xl text-xs space-y-2.5 mt-6 shrink-0">
                 <span className="text-red-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-sm">warning</span> Factory Reset</span>
                 <p className="text-[9px] text-brand-text leading-relaxed">Clears all local data and reloads the application.</p>
-                <button onClick={() => { if (confirm('Reset all data?')) { localStorage.clear(); window.location.reload(); } }} className="w-full py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/30 text-red-100 uppercase font-black text-[9px] tracking-widest rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1">
+                <button onClick={async () => { if (confirm('Reset all data?')) { try { const collections = ['tasks', 'teamMembers', 'activities', 'settings']; for (const c of collections) { const snap = await db.collection(c).get(); snap.docs.forEach(d => d.ref.delete()); } } catch {} localStorage.removeItem(STORAGE_KEY); window.location.reload(); }} className="w-full py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/30 text-red-100 uppercase font-black text-[9px] tracking-widest rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1">
                   <span className="material-symbols-outlined text-xs">restart_alt</span> Flash Sandbox
                 </button>
               </div>

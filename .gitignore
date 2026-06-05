@@ -9,3 +9,6 @@ coverage/
 .env.*.local
 !.env.example
 .DS_Store
+*.debug.log
+firestore-debug.log
+ui-debug.log
