@@ -586,7 +586,7 @@
         const [tDesc, setTDesc] = useState('');
         const [tPriority, setTPriority] = useState('medium');
         const [tStatus, setTStatus] = useState('to-do');
-        const [tAssignee, setTAssignee] = useState(teamMembers[0]?.id || 'sarah');
+        const [tAssignee, setTAssignee] = useState(teamMembers[0]?.id || '');
         const [tDueDate, setTDueDate] = useState(new Date().toISOString().split('T')[0]);
 
         const filtered = useMemo(() => {
@@ -599,7 +599,7 @@
         }, [tasks, search, prioFilter, assigneeFilter]);
 
         const openAdd = (status) => {
-          setTStatus(status); setTTitle(''); setTDesc(''); setTPriority('medium'); setTAssignee(teamMembers[0]?.id || 'sarah'); setTDueDate(new Date().toISOString().split('T')[0]); setIsAddOpen(true);
+          setTStatus(status); setTTitle(''); setTDesc(''); setTPriority('medium'); setTAssignee(teamMembers[0]?.id || ''); setTDueDate(new Date().toISOString().split('T')[0]); setIsAddOpen(true);
         };
 
         const openEdit = (task) => {
@@ -703,7 +703,7 @@
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col gap-1">
                         <label className="text-[8px] font-bold text-brand-muted uppercase">Assignee</label>
-                        <select value={tAssignee} onChange={e => setTAssignee(e.target.value)} className="bg-brand-bg p-1.5 text-xs rounded-xl border border-brand-muted/20 text-brand-heading outline-none">{teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
+                        <select value={tAssignee} onChange={e => setTAssignee(e.target.value)} className="bg-brand-bg p-1.5 text-xs rounded-xl border border-brand-muted/20 text-brand-heading outline-none">{teamMembers.length === 0 ? <option value="">Unassigned</option> : teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-[8px] font-bold text-brand-muted uppercase">Due Date</label>
@@ -755,7 +755,7 @@
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col gap-1">
                         <label className="text-[8px] font-bold text-brand-muted uppercase">Assignee</label>
-                        <select value={tAssignee} onChange={e => setTAssignee(e.target.value)} className="bg-brand-bg p-1.5 text-xs rounded-xl border border-brand-muted/20 text-brand-heading outline-none">{teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
+                        <select value={tAssignee} onChange={e => setTAssignee(e.target.value)} className="bg-brand-bg p-1.5 text-xs rounded-xl border border-brand-muted/20 text-brand-heading outline-none">{teamMembers.length === 0 ? <option value="">Unassigned</option> : teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-[8px] font-bold text-brand-muted uppercase">Due Date</label>
@@ -794,11 +794,11 @@
       //  CALENDAR VIEW
       // ══════════════════════════════════════════════════════════════════════
       function CalendarView({ tasks, teamMembers, onAddTask }) {
-        const [current, setCurrent] = useState(new Date(2026, 4, 15));
-        const [selectedStr, setSelectedStr] = useState('2026-05-15');
+        const [current, setCurrent] = useState(new Date());
+        const [selectedStr, setSelectedStr] = useState(new Date().toISOString().split('T')[0]);
         const [showAdd, setShowAdd] = useState(false);
         const [qTitle, setQTitle] = useState('');
-        const [qAssignee, setQAssignee] = useState(teamMembers[0]?.id || 'sarah');
+        const [qAssignee, setQAssignee] = useState(teamMembers[0]?.id || '');
 
         const year = current.getFullYear();
         const month = current.getMonth();
@@ -915,7 +915,7 @@
                   <div className="flex flex-col gap-1">
                     <label className="text-[8px] font-bold text-brand-muted uppercase">Assignee</label>
                     <select value={qAssignee} onChange={e => setQAssignee(e.target.value)} className="bg-brand-bg p-1 text-xs rounded-lg border border-brand-muted/20 text-brand-heading w-full outline-none">
-                      {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                      {teamMembers.length === 0 ? <option value="">Unassigned</option> : teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                   </div>
                   <div className="flex gap-2 pt-1.5">
@@ -1105,7 +1105,7 @@
 
               <div className="p-3 bg-red-950/20 border border-red-500/20 rounded-xl text-xs space-y-2.5 mt-6 shrink-0">
                 <span className="text-red-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-sm">warning</span> Factory Reset</span>
-                <p className="text-[9px] text-brand-text leading-relaxed">Clears all local data and resets to defaults.</p>
+                <p className="text-[9px] text-brand-text leading-relaxed">Clears all local data and reloads the application.</p>
                 <button onClick={() => { if (confirm('Reset all data?')) { localStorage.clear(); window.location.reload(); } }} className="w-full py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/30 text-red-100 uppercase font-black text-[9px] tracking-widest rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1">
                   <span className="material-symbols-outlined text-xs">restart_alt</span> Flash Sandbox
                 </button>
