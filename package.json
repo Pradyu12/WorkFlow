@@ -1,5 +1,9 @@
 {
   "name": "sprint-analytics-engine",
   "private": true,
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "dependencies": {
+    "@dataconnect/generated": "file:src/dataconnect-generated",
+    "firebase": "^12.14.0"
+  }
 }

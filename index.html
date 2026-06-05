@@ -11,9 +11,9 @@
     <!-- Core React UMD Scripts -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <!-- Firebase Firestore compat SDK -->
+    <!-- Firebase Realtime Database compat SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
     <!-- Babel standalone to support live JSX compile in container live preview -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
@@ -126,27 +126,31 @@
       let db = null;
       try {
         if (typeof firebase !== 'undefined') {
-          firebase.initializeApp({ projectId: 'demo-sprint-engine', apiKey: 'demo-key' });
-          db = firebase.firestore();
-          if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-            db.useEmulator('localhost', 8085);
-          }
-          db.enablePersistence().catch(() => {});
+          firebase.initializeApp({
+            apiKey: "AIzaSyDtOrJhMEQYiuvKIW19q-t3h7iin1C-5eQ",
+            authDomain: "workflow-7b279.firebaseapp.com",
+            databaseURL: "https://workflow-7b279-default-rtdb.firebaseio.com",
+            projectId: "workflow-7b279",
+            storageBucket: "workflow-7b279.firebasestorage.app",
+            messagingSenderId: "784831169944",
+            appId: "1:784831169944:web:aa0cd56c0548fea8e7d7ed"
+          });
+          db = firebase.database();
         }
       } catch (e) { console.warn('Firebase init failed:', e); db = null; }
 
-      function canUseFirestore() { return db !== null; }
+      function canUseDB() { return db !== null; }
 
-      let _fsAvailable = null;
+      let _dbAvailable = null;
 
-      function isFirestoreAvailable() {
-        if (!canUseFirestore()) return Promise.resolve(false);
-        if (_fsAvailable !== null) return Promise.resolve(_fsAvailable);
+      function isDBAvailable() {
+        if (!canUseDB()) return Promise.resolve(false);
+        if (_dbAvailable !== null) return Promise.resolve(_dbAvailable);
         return new Promise(resolve => {
-          const timeout = setTimeout(() => { _fsAvailable = false; resolve(false); }, 2000);
-          db.collection('_ping').limit(1).get()
-            .then(() => { clearTimeout(timeout); _fsAvailable = true; resolve(true); })
-            .catch(() => { clearTimeout(timeout); _fsAvailable = false; resolve(false); });
+          const timeout = setTimeout(() => { _dbAvailable = false; resolve(false); }, 2000);
+          db.ref('.info/connected').once('value')
+            .then(snap => { clearTimeout(timeout); _dbAvailable = snap.val() === true; resolve(_dbAvailable); })
+            .catch(() => { clearTimeout(timeout); _dbAvailable = false; resolve(false); });
         });
       }
 
@@ -156,43 +160,42 @@
 
         useEffect(() => {
           let cancelled = false;
-          let unsub = null;
+          let listener = null;
 
-          // Always load from localStorage first (instant)
           try {
             const cached = localStorage.getItem(STORAGE_KEY);
             if (cached) {
               const parsed = JSON.parse(cached);
-              if (parsed[collectionName]) {
-                setItems(parsed[collectionName]);
-              }
+              if (parsed[collectionName]) setItems(parsed[collectionName]);
             }
           } catch (e) {}
           setReady(true);
 
-          // Then try Firestore for real-time sync
-          const tryFirestore = async () => {
-            const available = await isFirestoreAvailable();
+          const tryConnect = async () => {
+            const available = await isDBAvailable();
             if (cancelled) return;
             if (available) {
-              let query = db.collection(collectionName);
-              if (orderByField) query = query.orderBy(orderByField, 'desc');
-              unsub = query.onSnapshot(snap => {
+              const ref = db.ref(collectionName);
+              listener = ref.on('value', snap => {
                 if (cancelled) return;
-                const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                setItems(items);
-                // Backup to localStorage
+                const data = snap.val();
+                if (!data) { setItems([]); return; }
+                const list = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+                if (orderByField) {
+                  list.sort((a, b) => ((b[orderByField] || '') > (a[orderByField] || '') ? 1 : -1));
+                }
+                setItems(list);
                 try {
                   const cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-                  cached[collectionName] = items;
+                  cached[collectionName] = list;
                   localStorage.setItem(STORAGE_KEY, JSON.stringify(cached));
                 } catch (e) {}
               });
             }
           };
-          tryFirestore();
+          tryConnect();
 
-          return () => { cancelled = true; if (unsub) unsub(); };
+          return () => { cancelled = true; if (listener) db.ref(collectionName).off('value', listener); };
         }, [collectionName]);
 
         return [items, ready, setItems];
@@ -200,32 +203,33 @@
 
       async function dbWriteDoc(collectionName, doc) {
         const { id, ...data } = doc;
-        const available = await isFirestoreAvailable();
+        const available = await isDBAvailable();
         if (available) {
           try {
-            await db.collection(collectionName).add(data);
+            const ref = db.ref(collectionName).push();
+            await ref.set(data);
             return;
           } catch (e) {}
         }
       }
 
       async function dbUpdateDoc(collectionName, id, data) {
-        const available = await isFirestoreAvailable();
+        const available = await isDBAvailable();
         if (available) {
           try {
             const clean = { ...data };
             delete clean.id;
-            await db.collection(collectionName).doc(id).update(clean);
+            await db.ref(`${collectionName}/${id}`).update(clean);
             return;
           } catch (e) {}
         }
       }
 
       async function dbDeleteDoc(collectionName, id) {
-        const available = await isFirestoreAvailable();
+        const available = await isDBAvailable();
         if (available) {
           try {
-            await db.collection(collectionName).doc(id).delete();
+            await db.ref(`${collectionName}/${id}`).remove();
             return;
           } catch (e) {}
         }
@@ -578,11 +582,11 @@
               if (parsed.projectMeta) setProjectMeta(parsed.projectMeta);
             }
           } catch (e) {}
-          // Try Firestore for project meta
-          isFirestoreAvailable().then(available => {
+          // Try RTDB for project meta
+          isDBAvailable().then(available => {
             if (available) {
-              db.collection('settings').doc('project').get().then(doc => {
-                if (doc.exists) setProjectMeta(doc.data());
+              db.ref('settings/project').once('value').then(snap => {
+                if (snap.exists()) setProjectMeta(snap.val());
               }).catch(() => {});
             }
           });
@@ -597,7 +601,7 @@
         const handleAddTask = async (newTask) => {
           const fresh = { ...newTask, id: `task-${Date.now()}`, createdAt: new Date().toISOString() };
           const user = teamMembers.find(m => m.id === fresh.assigneeId) || { name: 'Unassigned' };
-          const dbAvailable = await isFirestoreAvailable();
+          const dbAvailable = await isDBAvailable();
           if (dbAvailable) {
             await dbWriteDoc('tasks', fresh);
           } else {
@@ -608,7 +612,7 @@
 
         const handleUpdateTask = async (updated) => {
           const original = tasks.find(t => t.id === updated.id);
-          const dbAvailable = await isFirestoreAvailable();
+          const dbAvailable = await isDBAvailable();
           if (dbAvailable) {
             await dbUpdateDoc('tasks', updated.id, updated);
           } else {
@@ -620,7 +624,7 @@
 
         const handleDeleteTask = async (id) => {
           const original = tasks.find(t => t.id === id);
-          const dbAvailable = await isFirestoreAvailable();
+          const dbAvailable = await isDBAvailable();
           if (dbAvailable) {
             await dbDeleteDoc('tasks', id);
           } else {
@@ -631,7 +635,7 @@
 
         const handleAddTeamMember = async (member) => {
           const fresh = { ...member, id: `member-${Date.now()}` };
-          const dbAvailable = await isFirestoreAvailable();
+          const dbAvailable = await isDBAvailable();
           if (dbAvailable) {
             await dbWriteDoc('teamMembers', fresh);
           } else {
@@ -641,7 +645,7 @@
         };
 
         const handleUpdateTeamMember = async (id, data) => {
-          const dbAvailable = await isFirestoreAvailable();
+          const dbAvailable = await isDBAvailable();
           if (dbAvailable) {
             await dbUpdateDoc('teamMembers', id, data);
           } else {
@@ -651,16 +655,16 @@
 
         const handleSaveProjectMeta = async (meta) => {
           setProjectMeta(meta);
-          const available = await isFirestoreAvailable();
+          const available = await isDBAvailable();
           if (available) {
-            try { await db.collection('settings').doc('project').set(meta); } catch (e) {}
+            try { await db.ref('settings/project').set(meta); } catch (e) {}
           }
           localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, teamMembers, activities, projectMeta: meta }));
         };
 
         const logActivity = async (text, type = 'system') => {
           const entry = { id: `act-${Date.now()}`, text, timestamp: new Date().toISOString(), type };
-          const dbAvailable = await isFirestoreAvailable();
+          const dbAvailable = await isDBAvailable();
           if (dbAvailable) {
             await dbWriteDoc('activities', entry);
           } else {
@@ -1445,7 +1449,7 @@
               <div className="p-3 bg-red-950/20 border border-red-500/20 rounded-xl text-xs space-y-2.5 mt-6 shrink-0">
                 <span className="text-red-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-sm">warning</span> Factory Reset</span>
                 <p className="text-[9px] text-brand-text leading-relaxed">Clears all local data and reloads the application.</p>
-                <button onClick={async () => { if (confirm('Reset all data?')) { if (canUseFirestore()) { try { const collections = ['tasks', 'teamMembers', 'activities', 'settings']; for (const c of collections) { const snap = await db.collection(c).get(); snap.docs.forEach(d => d.ref.delete()); } } catch (e) {} } localStorage.removeItem(STORAGE_KEY); window.location.reload(); }}} className="w-full py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/30 text-red-100 uppercase font-black text-[9px] tracking-widest rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1">
+                <button onClick={async () => { if (confirm('Reset all data?')) { if (canUseDB()) { try { await db.ref().set(null); } catch (e) {} } localStorage.removeItem(STORAGE_KEY); window.location.reload(); }}} className="w-full py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/30 text-red-100 uppercase font-black text-[9px] tracking-widest rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1">
                   <span className="material-symbols-outlined text-xs">restart_alt</span> Flash Sandbox
                 </button>
               </div>

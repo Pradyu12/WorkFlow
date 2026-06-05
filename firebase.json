@@ -3,10 +3,16 @@
     "singleProjectMode": true,
     "firestore": {
       "port": 8085
+    },
+    "dataconnect": {
+      "dataDir": "dataconnect/.dataconnect/pgliteData"
     }
   },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "dataconnect": {
+    "source": "dataconnect"
   }
 }
