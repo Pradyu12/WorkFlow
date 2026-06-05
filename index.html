@@ -117,64 +117,6 @@
       }
 
       // ─── Seeded Data ──────────────────────────────────────────────────────
-      const DEFAULT_MEMBERS = [
-        { id: 'sarah', name: 'Sarah Jenkins', role: 'Project Manager', email: 'sarah.j@company.com', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200&h=200' },
-        { id: 'alex', name: 'Alex Rivera', role: 'Backend Eng', email: 'alex.r@company.com', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200&h=200' },
-        { id: 'emily', name: 'Emily Davis', role: 'UI/UX Designer', email: 'emily.d@company.com', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=200&h=200' },
-        { id: 'michael', name: 'Michael Chen', role: 'Frontend Eng', email: 'michael.c@company.com', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200' },
-        { id: 'david', name: 'David Kim', role: 'Quality Assurance', email: 'david.k@company.com', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200&h=200' }
-      ];
-
-      const DEFAULT_ACTIVITIES = [
-        { id: 'act1', text: 'Task "Update API" moved to In Progress by Alex Rivera', timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(), type: 'move' },
-        { id: 'act2', text: 'Task "Design Review" completed by Sarah Jenkins', timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(), type: 'complete' },
-        { id: 'act3', text: 'New comment on "Fix Bug #102" by Michael Chen', timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(), type: 'comment' },
-        { id: 'act4', text: 'Task "Setup Firestore Database Scheme" created by Emily Davis', timestamp: new Date(Date.now() - 1000 * 60 * 300).toISOString(), type: 'create' },
-        { id: 'act5', text: 'Task "Dockerize Server Deployment" moved to Blocked by Alex Rivera', timestamp: new Date(Date.now() - 1000 * 60 * 600).toISOString(), type: 'move' }
-      ];
-
-      const toDoTitles = ['Add error boundaries', 'Localize strings', 'Review webhook logs', 'Audit CSS variable tokens', 'Optimize bundle splitting', 'Fix hydration bugs', 'Create favicon variations'];
-      const inProgressTitles = ['Refactor database listeners', 'Upgrade React hooks', 'Optimize SVG dimensions', 'Validate card tokens', 'Review Tailwind post-builds', 'Implement real-time queries'];
-      const doneTitles = ['Bootstrap repository structure', 'Create TS build rules', 'Formulate color system', 'Configure Vite variables', 'Setup workspace launch icon'];
-      const blockedTitles = ['Integrate oauth callbacks', 'Review legal security terms', 'Resolve database cluster crash', 'Obtain billing credential authorizations'];
-
-      function generateSchedules() {
-        const list = [];
-        const now = new Date();
-        const distribution = { 'to-do': 37, 'in-progress': 45, 'done': 30, 'blocked': 12 };
-        const memberIds = DEFAULT_MEMBERS.map(m => m.id);
-        const priorities = ['low', 'medium', 'high'];
-
-        Object.keys(distribution).forEach(status => {
-          const count = distribution[status];
-          for (let i = 0; i < count; i++) {
-            const randomMember = memberIds[Math.floor(Math.random() * memberIds.length)];
-            const priority = priorities[Math.floor(Math.random() * priorities.length)];
-            const offsetDays = status === 'done' ? -Math.floor(Math.random() * 20) - 1 : Math.floor(Math.random() * 25) + 1;
-            const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays);
-            const dateStr = targetDate.toISOString().split('T')[0];
-
-            let title = '';
-            if (status === 'to-do') title = toDoTitles[i % toDoTitles.length] + ` (#${300 + i})`;
-            else if (status === 'in-progress') title = inProgressTitles[i % inProgressTitles.length] + ` (#${400 + i})`;
-            else if (status === 'done') title = doneTitles[i % doneTitles.length] + ` (#${500 + i})`;
-            else title = blockedTitles[i % blockedTitles.length] + ` (#${600 + i})`;
-
-            list.push({
-              id: `${status}-built-${i}`,
-              title,
-              description: 'Auto-seeded corporate milestone benchmark task.',
-              status,
-              priority,
-              dueDate: dateStr,
-              assigneeId: randomMember,
-              createdAt: new Date(now.getTime() - 1000 * 60 * 60 * i).toISOString()
-            });
-          }
-        });
-        return list;
-      }
-
       const STORAGE_KEY = 'ais_elegant_dark_state_v1';
 
       // ─── AI Assistant Component ───────────────────────────────────────────
@@ -344,39 +286,32 @@
       // ─── Main App ─────────────────────────────────────────────────────────
       function App() {
         const [tasks, setTasks] = useState([]);
-        const [teamMembers, setTeamMembers] = useState(DEFAULT_MEMBERS);
-        const [activities, setActivities] = useState(DEFAULT_ACTIVITIES);
+        const [teamMembers, setTeamMembers] = useState([]);
+        const [activities, setActivities] = useState([]);
         const [projectMeta, setProjectMeta] = useState({
           name: 'Sprint Analytics Engine',
           description: 'Aesthetic metrics visualization panel & task orchestration monitor',
-          managerId: 'sarah'
+          managerId: ''
         });
 
         const [activeTab, setActiveTab] = useState('dashboard');
-        const [phoneViewMode, setPhoneViewMode] = useState(true);
 
         useEffect(() => {
           try {
             const cached = localStorage.getItem(STORAGE_KEY);
             if (cached) {
               const parsed = JSON.parse(cached);
-              if (parsed.tasks && parsed.tasks.length > 0) {
-                setTasks(parsed.tasks);
-                setTeamMembers(parsed.teamMembers || DEFAULT_MEMBERS);
-                setActivities(parsed.activities || DEFAULT_ACTIVITIES);
-                setProjectMeta(parsed.projectMeta || { name: 'Sprint Analytics Engine', description: 'Aesthetic metrics visualization panel & task orchestration monitor', managerId: 'sarah' });
-                if (parsed.phoneViewMode !== undefined) setPhoneViewMode(parsed.phoneViewMode);
-                return;
-              }
+              if (parsed.tasks) setTasks(parsed.tasks);
+              if (parsed.teamMembers) setTeamMembers(parsed.teamMembers);
+              if (parsed.activities) setActivities(parsed.activities);
+              if (parsed.projectMeta) setProjectMeta(parsed.projectMeta);
             }
-          } catch (e) { console.warn('LocalState read error, fallback seeding', e); }
-          setTasks(generateSchedules());
+          } catch (e) { console.warn('LocalState read error', e); }
         }, []);
 
         useEffect(() => {
-          if (tasks.length === 0) return;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, teamMembers, activities, projectMeta, phoneViewMode }));
-        }, [tasks, teamMembers, activities, projectMeta, phoneViewMode]);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, teamMembers, activities, projectMeta }));
+        }, [tasks, teamMembers, activities, projectMeta]);
 
         const handleAddTask = (newTask) => {
           const fresh = { ...newTask, id: `task-${Date.now()}`, createdAt: new Date().toISOString() };
@@ -408,16 +343,7 @@
           setActivities(prev => [{ id: `act-${Date.now()}`, text, timestamp: new Date().toISOString(), type }, ...prev.slice(0, 30)]);
         };
 
-        const handleResetData = () => {
-          localStorage.removeItem(STORAGE_KEY);
-          setTasks(generateSchedules());
-          setTeamMembers(DEFAULT_MEMBERS);
-          setActivities(DEFAULT_ACTIVITIES);
-          setProjectMeta({ name: 'Sprint Analytics Engine', description: 'Aesthetic metrics visualization panel & task orchestration monitor', managerId: 'sarah' });
-          logActivity('System reset. Default datasets reseeded.', 'system');
-        };
-
-        const activeManager = teamMembers.find(m => m.id === projectMeta.managerId) || teamMembers[0];
+        const activeManager = teamMembers.find(m => m.id === projectMeta.managerId) || teamMembers[0] || null;
 
         return (
           <div className="min-h-screen bg-brand-bg text-brand-text font-sans flex flex-col">
@@ -436,82 +362,10 @@
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="bg-brand-bg border border-brand-muted/20 rounded-xl p-1 flex">
-                  <button onClick={() => setPhoneViewMode(true)} className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${phoneViewMode ? 'bg-brand-muted text-brand-bg shadow-sm' : 'text-brand-text hover:text-brand-accent'}`}>
-                    <span className="material-symbols-outlined text-sm">phone_iphone</span> Simulator
-                  </button>
-                  <button onClick={() => setPhoneViewMode(false)} className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${!phoneViewMode ? 'bg-brand-muted text-brand-bg shadow-sm' : 'text-brand-text hover:text-brand-accent'}`}>
-                    <span className="material-symbols-outlined text-sm">desktop_windows</span> Fluid Wide
-                  </button>
-                </div>
-
-                <button onClick={handleResetData} className="p-2 border border-brand-muted/25 bg-brand-card hover:bg-brand-bg rounded-xl text-brand-muted hover:text-brand-accent transition-all cursor-pointer" title="Reseed Sandbox Seed Data">
-                  <span className="material-symbols-outlined text-base">restart_alt</span>
-                </button>
-              </div>
             </header>
 
             <main className="flex-1 w-full flex justify-center items-center py-6 px-4 md:px-8 overflow-y-auto">
               
-              {phoneViewMode ? (
-                <div className="w-full max-w-[410px] h-[840px] bg-brand-bg rounded-[42px] shadow-2xl border-[10px] border-neutral-900 overflow-hidden flex flex-col relative shrink-0">
-                  
-                  <div className="h-9 px-6 flex items-center justify-between text-brand-heading text-[11px] font-semibold tracking-wider relative">
-                    <span>9:41</span>
-                    <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-24 h-[16px] bg-black rounded-full"></div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[12px]">signal_cellular_alt</span>
-                      <span className="material-symbols-outlined text-[12px]">wifi</span>
-                      <span className="material-symbols-outlined text-[12px]">battery_charging_full</span>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h2 className="text-xl font-black text-brand-heading tracking-tight leading-tight">{projectMeta.name}</h2>
-                        <p className="text-[10px] text-brand-muted uppercase tracking-wider mt-0.5">Corporate milestone logger</p>
-                      </div>
-                      <img src={activeManager.avatar} alt="Manager" className="w-10 h-10 rounded-full object-cover border border-brand-accent" onClick={() => setActiveTab('settings')} />
-                    </div>
-
-                    <div className="min-h-[580px]">
-                      {renderActiveTab({
-                        tasks, teamMembers, activities, activeManager, projectMeta,
-                        setTasks, setProjectMeta, setTeamMembers,
-                        onAddTask: handleAddTask, onUpdateTask: handleUpdateTask, onDeleteTask: handleDeleteTask,
-                        onAddTeamMember: handleAddTeamMember, logActivity, setActiveTab
-                      })}
-                    </div>
-                  </div>
-
-                  <nav className="bg-brand-card border-t border-brand-muted/15 py-2.5 px-3 flex justify-between items-center relative rounded-b-[32px] pb-4 shrink-0">
-                    <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center justify-center flex-1 transition-colors ${activeTab === 'dashboard' ? 'text-brand-accent' : 'text-brand-text/40'}`}>
-                      <span className="material-symbols-outlined text-lg">dashboard</span>
-                      <span className="text-[9px] mt-0.5">Overview</span>
-                    </button>
-                    <button onClick={() => setActiveTab('board')} className={`flex flex-col items-center justify-center flex-1 transition-colors ${activeTab === 'board' ? 'text-brand-accent' : 'text-brand-text/40'}`}>
-                      <span className="material-symbols-outlined text-lg">view_week</span>
-                      <span className="text-[9px] mt-0.5">Kanban</span>
-                    </button>
-                    <button onClick={() => setActiveTab('calendar')} className={`flex flex-col items-center justify-center flex-1 transition-colors ${activeTab === 'calendar' ? 'text-brand-accent' : 'text-brand-text/40'}`}>
-                      <span className="material-symbols-outlined text-lg">calendar_month</span>
-                      <span className="text-[9px] mt-0.5">Calendar</span>
-                    </button>
-                    <button onClick={() => setActiveTab('team')} className={`flex flex-col items-center justify-center flex-1 transition-colors ${activeTab === 'team' ? 'text-brand-accent' : 'text-brand-text/40'}`}>
-                      <span className="material-symbols-outlined text-lg">group</span>
-                      <span className="text-[9px] mt-0.5">Team</span>
-                    </button>
-                    <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center justify-center flex-1 transition-colors ${activeTab === 'settings' ? 'text-brand-accent' : 'text-brand-text/40'}`}>
-                      <span className="material-symbols-outlined text-lg">settings</span>
-                      <span className="text-[9px] mt-0.5">Configs</span>
-                    </button>
-                    <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-28 h-[3.5px] bg-brand-muted/30 rounded-full" />
-                  </nav>
-
-                </div>
-              ) : (
                 <div className="w-full max-w-7xl bg-brand-card rounded-3xl shadow-xl border border-brand-muted/15 p-6 flex flex-col md:flex-row gap-6">
                   
                   <aside className="w-full md:w-56 shrink-0 flex flex-col gap-6">
@@ -537,15 +391,17 @@
                       ))}
                     </nav>
 
-                    <div className="mt-auto hidden md:block pt-6 border-t border-brand-muted/10">
-                      <div className="flex items-center gap-3 bg-brand-bg px-3 py-2.5 rounded-2xl border border-brand-muted/10">
-                        <img src={activeManager.avatar} alt="lead" className="w-8 h-8 rounded-full object-cover border border-brand-accent" />
-                        <div className="flex flex-col overflow-hidden">
-                          <span className="text-[11px] font-bold text-brand-heading truncate">{activeManager.name}</span>
-                          <span className="text-[9px] text-brand-muted truncate font-medium">{activeManager.role}</span>
+                    {activeManager && (
+                      <div className="mt-auto hidden md:block pt-6 border-t border-brand-muted/10">
+                        <div className="flex items-center gap-3 bg-brand-bg px-3 py-2.5 rounded-2xl border border-brand-muted/10">
+                          <img src={activeManager.avatar} alt="lead" className="w-8 h-8 rounded-full object-cover border border-brand-accent" />
+                          <div className="flex flex-col overflow-hidden">
+                            <span className="text-[11px] font-bold text-brand-heading truncate">{activeManager.name}</span>
+                            <span className="text-[9px] text-brand-muted truncate font-medium">{activeManager.role}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </aside>
 
                   <div className="flex-1 min-h-[640px] flex flex-col gap-5 bg-brand-bg p-5 rounded-2xl border border-brand-muted/15 overflow-hidden">
@@ -571,7 +427,6 @@
                   </div>
 
                 </div>
-              )}
 
             </main>
 
@@ -1174,14 +1029,16 @@
       function SettingsView({ projectMeta, teamMembers, activeManager, setProjectMeta, setTeamMembers, logActivity }) {
         const [pName, setPName] = useState(projectMeta.name);
         const [pDesc, setPDesc] = useState(projectMeta.description);
-        const [manEmail, setManEmail] = useState(activeManager.email);
-        const [manName, setManName] = useState(activeManager.name);
+        const [manEmail, setManEmail] = useState(activeManager?.email || '');
+        const [manName, setManName] = useState(activeManager?.name || '');
         const [statusText, setStatusText] = useState(null);
 
         const handleSaveConfigs = (e) => {
           e.preventDefault();
           setProjectMeta({ ...projectMeta, name: pName.trim(), description: pDesc.trim() });
-          setTeamMembers(prev => prev.map(m => m.id === activeManager.id ? { ...m, name: manName.trim(), email: manEmail.trim() } : m));
+          if (activeManager) {
+            setTeamMembers(prev => prev.map(m => m.id === activeManager.id ? { ...m, name: manName.trim(), email: manEmail.trim() } : m));
+          }
           logActivity(`Global specification synchronized: "${pName.trim()}"`, 'system');
           setStatusText('SETTINGS SYNCHRONIZED');
           setTimeout(() => setStatusText(null), 3000);
