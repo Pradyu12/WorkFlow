@@ -1,6 +1,0 @@
-{
-  "name": "Project Dashboard Overview",
-  "description": "A high-fidelity project sprint tracker featuring interactive metrics cards, live Kanban boards, a Monthly due-date Calendar, a comprehensive Team Workload dashboard, and an AI-powered assistant with Gemini integration for sprint summaries, task suggestions, and project Q&A.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
