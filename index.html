@@ -69,7 +69,7 @@
   <body class="h-full flex flex-col font-sans select-none overflow-x-hidden antialiased">
     <div id="root" class="h-full flex flex-col"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-presets="env,react">
       const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
       // ─── Gemini AI API Helper ─────────────────────────────────────────────
@@ -167,7 +167,7 @@
                 setItems(parsed[collectionName]);
               }
             }
-          } catch {}
+          } catch (e) {}
           setReady(true);
 
           // Then try Firestore for real-time sync
@@ -186,7 +186,7 @@
                   const cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
                   cached[collectionName] = items;
                   localStorage.setItem(STORAGE_KEY, JSON.stringify(cached));
-                } catch {}
+                } catch (e) {}
               });
             }
           };
@@ -205,7 +205,7 @@
           try {
             await db.collection(collectionName).add(data);
             return;
-          } catch {}
+          } catch (e) {}
         }
       }
 
@@ -217,7 +217,7 @@
             delete clean.id;
             await db.collection(collectionName).doc(id).update(clean);
             return;
-          } catch {}
+          } catch (e) {}
         }
       }
 
@@ -227,7 +227,7 @@
           try {
             await db.collection(collectionName).doc(id).delete();
             return;
-          } catch {}
+          } catch (e) {}
         }
       }
 
@@ -416,7 +416,7 @@
               const parsed = JSON.parse(cached);
               if (parsed.projectMeta) setProjectMeta(parsed.projectMeta);
             }
-          } catch {}
+          } catch (e) {}
           // Try Firestore for project meta
           isFirestoreAvailable().then(available => {
             if (available) {
@@ -492,7 +492,7 @@
           setProjectMeta(meta);
           const available = await isFirestoreAvailable();
           if (available) {
-            try { await db.collection('settings').doc('project').set(meta); } catch {}
+            try { await db.collection('settings').doc('project').set(meta); } catch (e) {}
           }
           localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, teamMembers, activities, projectMeta: meta }));
         };
@@ -1270,7 +1270,7 @@
               <div className="p-3 bg-red-950/20 border border-red-500/20 rounded-xl text-xs space-y-2.5 mt-6 shrink-0">
                 <span className="text-red-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-sm">warning</span> Factory Reset</span>
                 <p className="text-[9px] text-brand-text leading-relaxed">Clears all local data and reloads the application.</p>
-                <button onClick={async () => { if (confirm('Reset all data?')) { if (canUseFirestore()) { try { const collections = ['tasks', 'teamMembers', 'activities', 'settings']; for (const c of collections) { const snap = await db.collection(c).get(); snap.docs.forEach(d => d.ref.delete()); } } catch {} } localStorage.removeItem(STORAGE_KEY); window.location.reload(); }} className="w-full py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/30 text-red-100 uppercase font-black text-[9px] tracking-widest rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1">
+                <button onClick={async () => { if (confirm('Reset all data?')) { if (canUseFirestore()) { try { const collections = ['tasks', 'teamMembers', 'activities', 'settings']; for (const c of collections) { const snap = await db.collection(c).get(); snap.docs.forEach(d => d.ref.delete()); } } catch (e) {} } localStorage.removeItem(STORAGE_KEY); window.location.reload(); }}} className="w-full py-1.5 bg-red-950 hover:bg-red-900 border border-red-500/30 text-red-100 uppercase font-black text-[9px] tracking-widest rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1">
                   <span className="material-symbols-outlined text-xs">restart_alt</span> Flash Sandbox
                 </button>
               </div>
