@@ -348,7 +348,7 @@
         return (
           <div className="min-h-screen bg-brand-bg text-brand-text font-sans flex flex-col">
             
-            <header className="bg-brand-card border-b border-brand-muted/20 px-6 py-4 flex flex-wrap items-center justify-between gap-4 z-40 shadow-md">
+            <header className="bg-brand-card border-b border-brand-muted/20 px-4 py-2.5 flex items-center justify-between gap-4 z-40 shadow-md shrink-0">
               <div className="flex items-center gap-3">
                 <span className="p-2.5 bg-brand-bg border border-brand-muted/20 rounded-xl text-brand-accent flex items-center justify-center">
                   <span className="material-symbols-outlined text-lg">database</span>
@@ -364,19 +364,19 @@
 
             </header>
 
-            <main className="flex-1 w-full flex justify-center items-center py-6 px-4 md:px-8 overflow-y-auto">
+            <main className="flex-1 w-full flex overflow-hidden">
               
-                <div className="w-full max-w-7xl bg-brand-card rounded-3xl shadow-xl border border-brand-muted/15 p-6 flex flex-col md:flex-row gap-6">
+                <div className="w-full flex flex-col md:flex-row gap-0">
                   
-                  <aside className="w-full md:w-56 shrink-0 flex flex-col gap-6">
-                    <div className="p-2 border-b border-brand-muted/15 pb-4">
-                      <div className="flex items-center gap-2 text-brand-accent font-black tracking-widest text-lg">
-                        <span className="material-symbols-outlined">api</span> NOVA.OS
+                  <aside className="hidden md:flex md:w-52 shrink-0 flex-col bg-brand-card border-r border-brand-muted/15">
+                    <div className="px-4 py-3 border-b border-brand-muted/15">
+                      <div className="flex items-center gap-2 text-brand-accent font-black tracking-widest">
+                        <span className="material-symbols-outlined text-lg">api</span> NOVA.OS
                       </div>
-                      <p className="text-[10px] text-brand-muted mt-1 uppercase font-semibold">Project Overseer Module</p>
+                      <p className="text-[9px] text-brand-muted mt-0.5 uppercase font-semibold">Project Overseer</p>
                     </div>
 
-                    <nav className="flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-visible">
+                    <nav className="flex flex-col gap-0.5 p-2 flex-1">
                       {[
                         { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
                         { id: 'board', label: 'Kanban Board', icon: 'view_week' },
@@ -384,39 +384,39 @@
                         { id: 'team', label: 'Project Team', icon: 'group' },
                         { id: 'settings', label: 'Configuration', icon: 'settings' }
                       ].map(nav => (
-                        <button key={nav.id} onClick={() => setActiveTab(nav.id)} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all text-left w-full cursor-pointer ${activeTab === nav.id ? 'bg-brand-muted text-brand-bg font-bold' : 'text-brand-text hover:bg-brand-muted/10'}`}>
-                          <span className="material-symbols-outlined text-[16px]">{nav.icon}</span>
+                        <button key={nav.id} onClick={() => setActiveTab(nav.id)} className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all w-full cursor-pointer ${activeTab === nav.id ? 'bg-brand-accent/15 text-brand-accent' : 'text-brand-text/70 hover:text-brand-text hover:bg-brand-muted/10'}`}>
+                          <span className="material-symbols-outlined text-[15px]">{nav.icon}</span>
                           <span>{nav.label}</span>
                         </button>
                       ))}
                     </nav>
 
                     {activeManager && (
-                      <div className="mt-auto hidden md:block pt-6 border-t border-brand-muted/10">
-                        <div className="flex items-center gap-3 bg-brand-bg px-3 py-2.5 rounded-2xl border border-brand-muted/10">
-                          <img src={activeManager.avatar} alt="lead" className="w-8 h-8 rounded-full object-cover border border-brand-accent" />
-                          <div className="flex flex-col overflow-hidden">
-                            <span className="text-[11px] font-bold text-brand-heading truncate">{activeManager.name}</span>
-                            <span className="text-[9px] text-brand-muted truncate font-medium">{activeManager.role}</span>
+                      <div className="mt-auto px-3 py-2 border-t border-brand-muted/10">
+                        <div className="flex items-center gap-2.5 bg-brand-bg/50 px-2.5 py-2 rounded-lg border border-brand-muted/10">
+                          <img src={activeManager.avatar} alt="lead" className="w-7 h-7 rounded-full object-cover border border-brand-accent/50" />
+                          <div className="flex flex-col overflow-hidden min-w-0">
+                            <span className="text-[10px] font-bold text-brand-heading truncate">{activeManager.name}</span>
+                            <span className="text-[8px] text-brand-muted truncate font-medium">{activeManager.role}</span>
                           </div>
                         </div>
                       </div>
                     )}
                   </aside>
 
-                  <div className="flex-1 min-h-[640px] flex flex-col gap-5 bg-brand-bg p-5 rounded-2xl border border-brand-muted/15 overflow-hidden">
-                    <div className="flex items-center justify-between pb-3 border-b border-brand-muted/10">
+                  <div className="flex-1 flex flex-col bg-brand-bg overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-2.5 border-b border-brand-muted/10 shrink-0">
                       <div>
-                        <h2 className="text-xl md:text-2xl font-black text-brand-heading tracking-tight leading-tight uppercase font-mono">{activeTab} Workspace</h2>
-                        <p className="text-[11px] text-brand-muted uppercase tracking-widest font-semibold mt-1">{projectMeta.description}</p>
+                        <h2 className="text-sm font-black text-brand-heading tracking-tight uppercase font-mono">{activeTab} Workspace</h2>
+                        <p className="text-[9px] text-brand-muted uppercase tracking-widest font-semibold mt-0.5">{projectMeta.description}</p>
                       </div>
-                      <div className="text-right text-xs">
-                        <span className="text-brand-muted font-bold block">Current Node</span>
-                        <span className="text-brand-accent tracking-wide font-mono font-bold">1024-ALPHA-STAGE</span>
+                      <div className="text-right">
+                        <span className="text-[9px] text-brand-muted font-bold block">Node</span>
+                        <span className="text-[10px] text-brand-accent tracking-wide font-mono font-bold">1024-ALPHA</span>
                       </div>
                     </div>
 
-                    <div className="flex-1">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-5">
                       {renderActiveTab({
                         tasks, teamMembers, activities, activeManager, projectMeta,
                         setTasks, setProjectMeta, setTeamMembers,
