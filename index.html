@@ -395,6 +395,96 @@
         );
       }
 
+      // ─── Auth ──────────────────────────────────────────────────────────────
+      const AUTH_KEY = 'sprint_engine_users_v1';
+      const SESSION_KEY = 'sprint_engine_session';
+
+      function hashPassword(password) {
+        let hash = 0;
+        for (let i = 0; i < password.length; i++) {
+          hash = ((hash << 5) - hash) + password.charCodeAt(i);
+          hash |= 0;
+        }
+        return 'h' + Math.abs(hash).toString(16);
+      }
+
+      function getStoredUsers() {
+        try { return JSON.parse(localStorage.getItem(AUTH_KEY) || '[]'); } catch { return []; }
+      }
+
+      function AuthPage({ onLogin, onRegister, error }) {
+        const [mode, setMode] = useState('login');
+        const [email, setEmail] = useState('');
+        const [password, setPassword] = useState('');
+        const [name, setName] = useState('');
+        const [role, setRole] = useState('');
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          if (mode === 'login') {
+            onLogin(email, password);
+          } else {
+            onRegister(name, email, role, password);
+          }
+        };
+
+        return (
+          <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
+            <div className="w-full max-w-md">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center gap-2 text-brand-accent font-black tracking-widest text-lg mb-1">
+                  <span className="material-symbols-outlined text-2xl">api</span> NOVA.OS
+                </div>
+                <p className="text-[10px] text-brand-muted uppercase tracking-widest font-semibold">Project Overseer — Authentication Gateway</p>
+              </div>
+
+              <div className="bg-brand-card border border-brand-muted/20 rounded-2xl p-6 shadow-xl">
+                <div className="flex mb-6 bg-brand-bg rounded-xl p-1">
+                  <button onClick={() => setMode('login')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${mode === 'login' ? 'bg-brand-accent text-brand-bg' : 'text-brand-muted hover:text-brand-text'}`}>Sign In</button>
+                  <button onClick={() => setMode('register')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${mode === 'register' ? 'bg-brand-accent text-brand-bg' : 'text-brand-muted hover:text-brand-text'}`}>Register</button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-3.5">
+                  {mode === 'register' && (
+                    <div>
+                      <label className="text-[8px] font-bold text-brand-muted uppercase block mb-1">Full Name</label>
+                      <input type="text" required placeholder="e.g. Alex Rivera" value={name} onChange={e => setName(e.target.value)} className="w-full bg-brand-bg p-2.5 text-xs rounded-xl border border-brand-muted/20 text-brand-heading outline-none focus:border-brand-accent placeholder-brand-muted/50" />
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-[8px] font-bold text-brand-muted uppercase block mb-1">Email</label>
+                    <input type="email" required placeholder="name@company.co" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-brand-bg p-2.5 text-xs rounded-xl border border-brand-muted/20 text-brand-heading outline-none focus:border-brand-accent placeholder-brand-muted/50" />
+                  </div>
+                  {mode === 'register' && (
+                    <div>
+                      <label className="text-[8px] font-bold text-brand-muted uppercase block mb-1">Role</label>
+                      <input type="text" required placeholder="e.g. Developer, Manager" value={role} onChange={e => setRole(e.target.value)} className="w-full bg-brand-bg p-2.5 text-xs rounded-xl border border-brand-muted/20 text-brand-heading outline-none focus:border-brand-accent placeholder-brand-muted/50" />
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-[8px] font-bold text-brand-muted uppercase block mb-1">Password</label>
+                    <input type="password" required placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-brand-bg p-2.5 text-xs rounded-xl border border-brand-muted/20 text-brand-heading outline-none focus:border-brand-accent placeholder-brand-muted/50" />
+                  </div>
+
+                  {error && (
+                    <div className="p-2.5 bg-red-950/30 border border-red-500/20 rounded-xl text-[10px] text-red-400 font-mono text-center">{error}</div>
+                  )}
+
+                  <button type="submit" className="w-full py-2.5 bg-brand-accent hover:opacity-90 text-brand-bg font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer">
+                    {mode === 'login' ? 'Authenticate Access' : 'Deploy Identity'}
+                  </button>
+                </form>
+              </div>
+
+              <p className="text-[9px] text-brand-muted text-center mt-6 font-mono">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse mr-1.5 align-middle"></span>
+                NODE 1024-ALPHA — SECURE CONNECTION
+              </p>
+            </div>
+          </div>
+        );
+      }
+
       // ─── Main App ─────────────────────────────────────────────────────────
       function App() {
         const [tasks, tasksReady, setTasks] = useDbCollection('tasks', 'createdAt');
@@ -406,6 +496,66 @@
           managerId: ''
         });
         const ready = tasksReady && membersReady && activitiesReady;
+
+        const [currentUser, setCurrentUser] = useState(null);
+        const [authPage, setAuthPage] = useState(true);
+        const [authError, setAuthError] = useState('');
+
+        useEffect(() => {
+          try {
+            const session = localStorage.getItem(SESSION_KEY);
+            if (session) {
+              const parsed = JSON.parse(session);
+              if (parsed.email) {
+                setCurrentUser(parsed);
+                setAuthPage(false);
+              }
+            }
+          } catch (e) {}
+        }, []);
+
+        const handleLogin = (email, password) => {
+          const users = getStoredUsers();
+          const record = users.find(u => u.email === email);
+          if (!record) { setAuthError('No account found with this email.'); return; }
+          if (record.passwordHash !== hashPassword(password)) { setAuthError('Invalid password.'); return; }
+          const member = teamMembers.find(m => m.email === email);
+          const session = {
+            email,
+            name: member ? member.name : email.split('@')[0],
+            role: member ? member.role : 'Member',
+            avatar: member ? member.avatar : `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200`
+          };
+          localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+          setCurrentUser(session);
+          setAuthPage(false);
+          setAuthError('');
+        };
+
+        const handleRegister = (name, email, role, password) => {
+          const users = getStoredUsers();
+          if (users.find(u => u.email === email)) { setAuthError('Email already registered.'); return; }
+          users.push({ email, passwordHash: hashPassword(password) });
+          localStorage.setItem(AUTH_KEY, JSON.stringify(users));
+          const avatarSeed = Date.now();
+          const avatarUrl = `https://images.unsplash.com/photo-${avatarSeed % 2 === 0 ? '1494790108377-be9c29b29330' : '1535713875002-d1d0cf377fde'}?auto=format&fit=crop&q=80&w=200&h=200`;
+          handleAddTeamMember({ name, email, role, avatar: avatarUrl });
+          const session = { email, name, role, avatar: avatarUrl };
+          localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+          setCurrentUser(session);
+          setAuthPage(false);
+          setAuthError('');
+        };
+
+        const handleLogout = () => {
+          localStorage.removeItem(SESSION_KEY);
+          setCurrentUser(null);
+          setAuthPage(true);
+        };
+
+        if (authPage) {
+          return <AuthPage onLogin={handleLogin} onRegister={handleRegister} error={authError} />;
+        }
 
         const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -526,6 +676,13 @@
                 </div>
               </div>
 
+              <div className="flex items-center gap-2.5">
+                <img src={currentUser.avatar} alt="" className="w-6 h-6 rounded-full object-cover border border-brand-accent/40 shrink-0 hidden sm:block" />
+                <div className="hidden sm:block text-right">
+                  <span className="text-[10px] font-bold text-brand-heading block leading-tight">{currentUser.name}</span>
+                  <span className="text-[8px] text-brand-muted font-mono">{currentUser.email}</span>
+                </div>
+              </div>
             </header>
 
             <main className="flex-1 w-full flex overflow-hidden">
@@ -555,17 +712,18 @@
                       ))}
                     </nav>
 
-                    {activeManager && (
-                      <div className="mt-auto px-3 py-2 border-t border-brand-muted/10">
-                        <div className="flex items-center gap-2.5 bg-brand-bg/50 px-2.5 py-2 rounded-lg border border-brand-muted/10">
-                          <img src={activeManager.avatar} alt="lead" className="w-7 h-7 rounded-full object-cover border border-brand-accent/50" />
-                          <div className="flex flex-col overflow-hidden min-w-0">
-                            <span className="text-[10px] font-bold text-brand-heading truncate">{activeManager.name}</span>
-                            <span className="text-[8px] text-brand-muted truncate font-medium">{activeManager.role}</span>
-                          </div>
+                    <div className="mt-auto px-3 py-2 border-t border-brand-muted/10 space-y-2">
+                      <div className="flex items-center gap-2.5 bg-brand-bg/50 px-2.5 py-2 rounded-lg border border-brand-muted/10">
+                        <img src={currentUser.avatar} alt="user" className="w-7 h-7 rounded-full object-cover border border-brand-accent/50 shrink-0" />
+                        <div className="flex flex-col overflow-hidden min-w-0">
+                          <span className="text-[10px] font-bold text-brand-heading truncate">{currentUser.name}</span>
+                          <span className="text-[8px] text-brand-muted truncate font-medium">{currentUser.role}</span>
                         </div>
                       </div>
-                    )}
+                      <button onClick={handleLogout} className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider text-brand-muted hover:text-red-400 hover:bg-red-950/20 transition-all cursor-pointer">
+                        <span className="material-symbols-outlined text-xs">logout</span> Disconnect
+                      </button>
+                    </div>
                   </aside>
 
                   <div className="flex-1 flex flex-col bg-brand-bg overflow-hidden">
