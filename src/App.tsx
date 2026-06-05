@@ -10,6 +10,7 @@ import BoardView from './components/BoardView';
 import CalendarView from './components/CalendarView';
 import TeamView from './components/TeamView';
 import SettingsView from './components/SettingsView';
+import AIAssistant from './components/AIAssistant';
 import { 
   Home, 
   LayoutGrid, 
@@ -579,6 +580,12 @@ export default function App() {
 
         </AnimatePresence>
       </main>
+
+      <AIAssistant
+        tasks={tasks}
+        teamMembers={teamMembers}
+        projectMeta={projectMeta}
+      />
 
     </div>
   );
