@@ -1,0 +1,6 @@
+{
+  "name": "Project Dashboard Overview",
+  "description": "A high-fidelity project sprint tracker featuring interactive metrics cards, live Kanban boards, a Monthly due-date Calendar, and a comprehensive Team Workload dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
